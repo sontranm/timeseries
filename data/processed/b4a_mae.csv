@@ -1,0 +1,4 @@
+evaluation_group,ffill_MAE,linear_interpolation_MAE
+all_15_missing,39.2,24.466666666666665
+12_random_missing,31.0,17.833333333333332
+3_consecutive_missing,72.0,51.0

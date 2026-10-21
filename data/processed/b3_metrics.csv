@@ -1,0 +1,7 @@
+row,metric,value
+0,trend_strength,0.9960685869330693
+1,seasonal_strength,0.9593394449009487
+2,seasonal_peak_month,7.0
+3,residual_variance,0.0007036606642691085
+4,ljung_box_p_lag_10,0.0002590309831285781
+5,ljung_box_p_lag_20,0.0005493335226271745

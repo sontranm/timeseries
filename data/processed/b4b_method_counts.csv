@@ -1,0 +1,7 @@
+row,method,flagged_points
+0,STL residual |z| > 3,5
+1,STL residual IQR,14
+2,STL residual both methods,5
+3,Raw series |z| > 3,0
+4,Raw series IQR,0
+5,Raw series rolling 3 SD,0
