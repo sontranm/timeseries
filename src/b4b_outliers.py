@@ -4,7 +4,9 @@ import bootstrap  # noqa: F401
 import numpy as np
 import pandas as pd
 
-from analysis_utils import COLORS, finish_axes, save_csv, save_figure
+from analysis_utils import (
+    COLORS, add_caption, add_mean_line, finish_axes, save_csv, save_figure, year_axis
+)
 from load_data import PROCESSED, load_airpassengers
 import matplotlib.pyplot as plt
 
@@ -117,9 +119,15 @@ def main():
         index_label="Month",
     )
 
-    fig, ax = plt.subplots(figsize=(11, 4.5), constrained_layout=True)
+    residual_mean = residual.mean()
+    residual_sd = residual.std(ddof=0)
+    fig, ax = plt.subplots(figsize=(11, 5.2), constrained_layout=True)
     ax.plot(residual.index, residual, color=COLORS["blue"], linewidth=1.2,
             label="STL residual (log scale)")
+    for sign in (-1, 1):
+        ax.axhline(residual_mean + sign * 3 * residual_sd, color=COLORS["orange"],
+                   linestyle="-.", linewidth=1,
+                   label="Mean ± 3 SD (Z-score limit)" if sign == 1 else None)
     ax.scatter(residual_z_flag[residual_z_flag].index,
                residual.loc[residual_z_flag], marker="s", s=45,
                color=COLORS["orange"], label="Z-score |z| > 3")
@@ -130,15 +138,24 @@ def main():
     if len(flagged_dates):
         ax.scatter(flagged_dates, residual.loc[flagged_dates], marker="o", s=85,
                    color=COLORS["vermillion"], label="Both methods", zorder=4)
-    ax.axhline(residual_iqr_low, color=COLORS["purple"], linestyle=":", linewidth=1)
+    ax.axhline(residual_iqr_low, color=COLORS["purple"], linestyle=":", linewidth=1,
+               label="IQR fences Q1 − 1.5·IQR, Q3 + 1.5·IQR")
     ax.axhline(residual_iqr_high, color=COLORS["purple"], linestyle=":", linewidth=1)
-    ax.set(title="Outlier candidates in robust STL residuals",
-           xlabel="Month", ylabel="Residual on log scale")
-    ax.legend(ncols=2, frameon=False, fontsize=8)
+    add_mean_line(ax, residual, fmt=".3f")
+    ax.set(title="Outlier candidates in robust STL residuals "
+                 f"(Z-score: {int(residual_z_flag.sum())}, IQR: {int(residual_iqr_flag.sum())}, "
+                 f"both: {int(residual_consensus.sum())})",
+           xlabel="Year", ylabel="Residual on log scale")
+    ax.legend(ncols=2, frameon=False, fontsize=8, loc="upper right")
+    year_axis(ax)
     finish_axes(ax)
+    add_caption(fig, "Residual = what remains after removing trend and seasonality, so unusual "
+                "months stand out. A point is flagged if it lies beyond the orange lines "
+                "(more than 3 SD from the mean) or beyond the purple fences (IQR rule). Points "
+                "flagged by both methods are treated as outliers and replaced.")
     save_figure(fig, "b4b_outlier.png")
 
-    fig, ax = plt.subplots(figsize=(11, 4.5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(11, 4.8), constrained_layout=True)
     ax.plot(original.index, original, color=COLORS["gray"], linewidth=1.7,
             label="Original AirPassengers")
     ax.plot(cleaned.index, cleaned, color=COLORS["green"], linewidth=1.1,
@@ -146,10 +163,17 @@ def main():
     if len(flagged_dates):
         ax.scatter(flagged_dates, original.loc[flagged_dates], color=COLORS["vermillion"],
                    marker="x", s=60, label="Interpolated candidates", zorder=3)
-    ax.set(title="AirPassengers before and after outlier handling",
-           xlabel="Month", ylabel="Passengers (thousands)")
-    ax.legend(frameon=False)
+    add_mean_line(ax, cleaned, label="Mean (cleaned)", unit="k")
+    ax.set(title=f"AirPassengers before and after outlier handling "
+                 f"({len(flagged_dates)} month(s) replaced)",
+           xlabel="Year", ylabel="Passengers (thousands)")
+    ax.legend(frameon=False, fontsize=8, loc="upper left")
+    year_axis(ax)
     finish_axes(ax)
+    add_caption(fig, "Grey: original series. Green dashed: series after replacing months flagged "
+                "by both outlier rules with linearly interpolated values (red crosses mark the "
+                "original values that were replaced). Where the two lines overlap, nothing "
+                "changed.")
     save_figure(fig, "b4b_before_after.png")
 
 

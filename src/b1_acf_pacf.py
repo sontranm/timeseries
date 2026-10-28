@@ -1,11 +1,16 @@
 """Bài 1: Phân tích ACF và PACF của chuỗi AirPassengers."""
 
+import bootstrap  # noqa: F401
+
 import matplotlib.pyplot as plt
 
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.stattools import acf, pacf
 
-from load_data import load_airpassengers, FIG
+from analysis_utils import (
+    COLORS, add_caption, add_mean_line, annotate_extremes, finish_axes,
+    plot_correlogram, save_figure, year_axis
+)
+from load_data import load_airpassengers
 
 
 # Đọc dữ liệu AirPassengers
@@ -29,56 +34,65 @@ print(y.describe())
 # 2. VE LINE CHART
 # ==============================
 
-plt.figure(figsize=(12, 6))
+# Trung binh tung nam (bac thang) va trung binh toan chuoi (net dut)
+annual_mean = y.groupby(y.index.year).transform("mean")
 
-plt.plot(y.index, y.values)
+fig, ax = plt.subplots(figsize=(11, 4.8), constrained_layout=True)
 
-plt.title("AirPassengers - Monthly Passengers")
-plt.xlabel("Time")
-plt.ylabel("Passengers (thousands)")
+ax.plot(y.index, y, color=COLORS["blue"], linewidth=1.8,
+        label="Monthly passengers")
+ax.plot(annual_mean.index, annual_mean, color=COLORS["orange"], linewidth=1.6,
+        drawstyle="steps-post", label="Annual mean (one level per year)")
+add_mean_line(ax, y, label="Overall mean", unit="k")
+annotate_extremes(ax, y, unit="k")
 
-plt.grid(True)
-plt.tight_layout()
+ax.set(title="Monthly AirPassengers (1949–1960): rising trend with yearly peaks",
+       xlabel="Year", ylabel="Passengers (thousands)")
+ax.legend(frameon=False, fontsize=8, loc="upper left")
+year_axis(ax)
+finish_axes(ax)
+add_caption(fig, "Blue line: number of international airline passengers each month. "
+            "Orange steps: average of each year, which rises every year, so the series "
+            "has an upward trend. Dashed black line: mean of all 144 months; early years lie "
+            "below it and later years above it, so the series is not stationary around one "
+            "level. The swings around the steps grow over time, showing multiplicative "
+            "seasonality.")
 
-plt.savefig(FIG / "b1_line.png", dpi=300)
-
-plt.show()
+save_figure(fig, "b1_line.png")
 
 # ==============================
 # 3. VE ACF 40 LAGS
 # ==============================
 
-fig, ax = plt.subplots(figsize=(12, 6))
+fig, ax = plt.subplots(figsize=(10, 4.8), constrained_layout=True)
 
-plot_acf(y, lags=40, ax=ax)
+plot_correlogram(y, 40, ax, "AirPassengers ACF (40 lags): slow decay, peaks every 12 months",
+                 COLORS["blue"], method="acf", highlight=(12, 24, 36))
 
-ax.set_title("ACF - AirPassengers (40 lags)")
-ax.set_xlabel("Lag")
-ax.set_ylabel("Autocorrelation")
+ax.set_xlabel("Lag (months)")
+add_caption(fig, "Each stem is the correlation between the series and itself shifted by k "
+            "months. Stems outside the blue band are statistically significant. The slow "
+            "decay from lag 1 indicates trend; the local peaks at lags 12, 24, 36 indicate "
+            "annual seasonality.")
 
-plt.tight_layout()
-
-plt.savefig(FIG / "b1_acf.png", dpi=300)
-
-plt.show()
+save_figure(fig, "b1_acf.png")
 
 # ==============================
 # 4. VE PACF 40 LAGS
 # ==============================
 
-fig, ax = plt.subplots(figsize=(12, 6))
+fig, ax = plt.subplots(figsize=(10, 4.8), constrained_layout=True)
 
-plot_pacf(y, lags=40, method="ywm", ax=ax)
+plot_correlogram(y, 40, ax,
+                 "AirPassengers PACF (40 lags; Yule–Walker): dominant spike at lag 1",
+                 COLORS["orange"], method="pacf", highlight=(1, 13))
 
-ax.set_title("PACF - AirPassengers (40 lags)")
-ax.set_xlabel("Lag")
-ax.set_ylabel("Partial Autocorrelation")
+ax.set_xlabel("Lag (months)")
+add_caption(fig, "PACF measures the direct correlation at lag k after removing the effect "
+            "of shorter lags. The large spike at lag 1 means each month depends mainly on the "
+            "previous month; the negative spike at lag 13 reflects the annual seasonal pattern.")
 
-plt.tight_layout()
-
-plt.savefig(FIG / "b1_pacf.png", dpi=300)
-
-plt.show()
+save_figure(fig, "b1_pacf.png")
 
 # ==============================
 # 5. TINH GIA TRI ACF VA PACF
